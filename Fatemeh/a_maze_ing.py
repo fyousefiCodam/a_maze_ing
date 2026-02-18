@@ -82,11 +82,10 @@ def validate_config(raw_config: Dict[str, str]) -> Dict[str, object]:
     try:
         width = int(raw_config["WIDTH"])
     except ValueError:
-        error_exit("WIDTH must be an integer.")
+        error_exit("WIDTH must be integer.")
 
     if width <= 0:
-        error_exit("WIDTH must be greater than 0.")
-
+        error_exit("WIDTHmust be greater than 0.")
     validated["width"] = width
 
     # ---- HEIGHT ----
@@ -166,12 +165,10 @@ def main() -> None:
     raw_config = parse_config(config_path)
     config = validate_config(raw_config)
 
-
     # Temporary confirmation output (for development only)
     print("Config file parsed successfully:")
     for key, value in config.items():
         print(f"{key} = {value}")
-
 
 
 if __name__ == "__main__":
