@@ -154,21 +154,75 @@ def validate_config(raw_config: Dict[str, str]) -> Dict[str, object]:
     return validated
 
 
-def main() -> None:
+def write_output_file(
+    grid: list[list[int]],
+    entry: tuple[int, int],
+    exit: tuple[int, int],
+    path: str,
+    output_file: str
+) -> None:
+    """
+    Write the maze output file in the required format.
+    """
+    try:
+        with open(output_file, "w") as file:
+            # Write maze grid (hex)
+            for row in grid:
+                hex_row = "".join(format(cell, "x") for cell in row)
+                file.write(hex_row + "\n")
 
+            # Blank line
+            file.write("\n")
+
+            # Metadata
+            file.write(f"{entry[0]},{entry[1]}\n")
+            file.write(f"{exit[0]},{exit[1]}\n")
+            file.write(f"{path}\n")
+
+    except OSError:
+        error_exit(f"Cannot write to output file '{output_file}'.")
+
+
+def fake_maze():
+    """
+    TEMPORARY for test
+    """
+    grid = [
+        [15, 14, 13],
+        [11,  0,  7],
+        [9,  3,  6],
+    ]
+
+    entry = (0, 0)
+    exit = (2, 2)
+    path = "EESS"
+
+    return grid, entry, exit, path
+
+
+def main() -> None:
     if len(sys.argv) != 2:
         error_exit("Usage: python3 a_maze_ing.py <config_file>")
 
     config_path = sys.argv[1]
 
-    # ---- Config parsing and validating ----
+    # Config parsing and validation
     raw_config = parse_config(config_path)
     config = validate_config(raw_config)
 
-    # Temporary confirmation output (for development only)
-    print("Config file parsed successfully:")
-    for key, value in config.items():
-        print(f"{key} = {value}")
+    # TEMPORARY stub maze
+    grid, entry, exit, path = fake_maze()
+
+    # Write output file
+    write_output_file(
+        grid=grid,
+        entry=entry,
+        exit=exit,
+        path=path,
+        output_file=config["output_file"]
+    )
+
+    print("Output file generated successfully.")
 
 
 if __name__ == "__main__":
