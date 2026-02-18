@@ -210,7 +210,7 @@ def main() -> None:
     raw_config = parse_config(config_path)
     config = validate_config(raw_config)
 
-    # TEMPORARY stub maze
+    # TEMPORARY fake maze
     grid, entry, exit, path = fake_maze()
 
     # Write output file
