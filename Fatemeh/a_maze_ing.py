@@ -154,6 +154,23 @@ def validate_config(raw_config: Dict[str, str]) -> Dict[str, object]:
     return validated
 
 
+def fake_maze():
+    """
+    TEMPORARY for test
+    """
+    grid = [
+        [15, 14, 13],
+        [11,  0,  7],
+        [9,  3,  6],
+    ]
+
+    entry = (0, 0)
+    exit = (2, 2)
+    path = "EESS"
+
+    return grid, entry, exit, path
+
+
 def write_output_file(
     grid: list[list[int]],
     entry: tuple[int, int],
@@ -181,23 +198,6 @@ def write_output_file(
 
     except OSError:
         error_exit(f"Cannot write to output file '{output_file}'.")
-
-
-def fake_maze():
-    """
-    TEMPORARY for test
-    """
-    grid = [
-        [15, 14, 13],
-        [11,  0,  7],
-        [9,  3,  6],
-    ]
-
-    entry = (0, 0)
-    exit = (2, 2)
-    path = "EESS"
-
-    return grid, entry, exit, path
 
 
 def main() -> None:
