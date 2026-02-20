@@ -188,10 +188,8 @@ def write_output_file(
                 hex_row = "".join(format(cell, "x") for cell in row)
                 file.write(hex_row + "\n")
 
-            # Blank line
             file.write("\n")
 
-            # Metadata
             file.write(f"{entry[0]},{entry[1]}\n")
             file.write(f"{exit[0]},{exit[1]}\n")
             file.write(f"{path}\n")
