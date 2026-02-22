@@ -1,7 +1,6 @@
-import random
 """This file contains the main maze class and the error handling of the
 maze inputs, it contains the maze data structure and other validations"""
-
+import random
 
 from enum import Enum
 from typing import Set, Tuple
@@ -21,7 +20,7 @@ class Ansi(str, Enum):
         return self.value
 
 
-class maze:
+class Maze:
     """ This is for creating a rectangular maze
     and each cell in the maze has walls on all the four
     sides and they are defined in accordance to their
@@ -57,34 +56,3 @@ class maze:
         self.grid: list[list[int]] = [[15] * width for _ in range(height)]
         self.visited: Set[Tuple[int, int]] = set()
 
-    def is_in_bounds(self, coord: tuple[int, int]) -> bool:
-        """Return True if coord lies within the maze grid, False otherwise."""
-        x, y = coord
-        # `and` is correct here: both axes must be in range simultaneously.
-        return 0 <= x < self.width and 0 <= y < self.height
-
-    def coordinate_validation(self,
-                              coord: tuple[int, int],
-                              name: str = "coordinate") -> tuple[int, int]:
-        """
-        Validate that a coordinate lies within the maze bounds.
-
-        Raises ValueError if out of bounds.
-        Returns the coordinate unchanged on success.
-        """
-        if not self.is_in_bounds(coord):
-            raise ValueError(
-                f"'{name}' coordinate {coord} is out of maze bounds "
-                f"(width={self.width}, height={self.height})."
-            )
-        return coord
-
-
-def entry(self, entry: tuple[int, int]) -> tuple[int, int]:
-    # validates and returns the entry coordinates
-    return self.valid_coordinates(entry, name="entry")
-
-
-def exit(self, exit: tuple[int, int]) -> tuple[int, int]:
-    # validates and returns the exit coordinates
-    return self.valid_coordinates(exit, name="exit")
