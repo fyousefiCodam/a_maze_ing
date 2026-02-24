@@ -4,6 +4,7 @@ interactive menu, path toggle, and colour cycling.
 """
 
 import os
+import time
 from typing import List, Tuple, Optional, Callable
 
 
@@ -226,6 +227,54 @@ def render_maze(
     return pixels_to_string(pixels, wall_color_idx)
 
 
+def animate_path_ui(
+    grid: List[List[int]],
+    width: int,
+    height: int,
+    entry: Tuple[int, int],
+    exit_pos: Tuple[int, int],
+    path_str: str,
+    wall_color_idx: int,
+    delay: float = 0.15,
+) -> None:
+    """
+    Animate the solution path step by step in the terminal.
+    """
+    if not path_str:
+        return
+
+    path_coords = path_to_coords(entry, path_str)
+    visible_coords: List[Tuple[int, int]] = []
+
+    for coord in path_coords:
+        visible_coords.append(coord)
+
+        clear_screen()
+
+        pixels = build_pixel_grid(
+            grid=grid,
+            width=width,
+            height=height,
+            entry=entry,
+            exit_pos=exit_pos,
+            path_coords=visible_coords,
+            show_path=True,
+        )
+
+        maze_str = pixels_to_string(pixels, wall_color_idx)
+
+        print_maze_frame(
+            maze_str,
+            show_path=True,
+            wall_color_idx=wall_color_idx,
+            entry=entry,
+            exit_pos=exit_pos,
+        )
+        print_legend()
+
+        time.sleep(delay)
+
+
 # Display helpers
 def clear_screen() -> None:
     """Clear the terminal screen portably."""
@@ -279,7 +328,8 @@ def print_menu() -> None:
     print("\033[1m1.\033[0m Re-generate a new maze")
     print("\033[1m2.\033[0m Show / Hide path from entry to exit")
     print("\033[1m3.\033[0m Rotate maze wall colours")
-    print("\033[1m4.\033[0m Quit")
+    print("\033[1m4.\033[0m Animate solution path")
+    print("\033[1m5.\033[0m Quit")
 
 
 # Main interactive loop
@@ -331,7 +381,7 @@ def run_ui(
             print("\033[2m(Re-generate unavailable: no generator provided)\033[0m")
 
         try:
-            choice = input("\nChoice (1-4): ").strip()
+            choice = input("\nChoice (1-5): ").strip()
         except (EOFError, KeyboardInterrupt):
             print("\nGoodbye!")
             break
@@ -358,7 +408,19 @@ def run_ui(
             wall_color_idx = (wall_color_idx + 1) % len(WALL_PALETTES)
 
         elif choice == '4':
-            print("Goodbye!")
+            animate_path_ui(
+                grid=grid,
+                width=width,
+                height=height,
+                entry=entry,
+                exit_pos=exit_pos,
+                path_str=path_str,
+                wall_color_idx=wall_color_idx,
+            )
+            input("\nPress Enter to continue...")
+
+        elif choice == '5':
+            print("Goodbye! :)")
             break
 
         else:

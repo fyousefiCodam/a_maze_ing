@@ -221,6 +221,27 @@ def write_output_file(
         error_exit(f"Cannot write to output file '{output_file}'.")
 
 
+def path_to_positions(
+    entry: tuple[int, int],
+    path: str
+) -> list[tuple[int, int]]:
+    x, y = entry
+    positions = [(x, y)]
+
+    for move in path:
+        if move == "N":
+            y -= 1
+        elif move == "S":
+            y += 1
+        elif move == "E":
+            x += 1
+        elif move == "W":
+            x -= 1
+        positions.append((x, y))
+
+    return positions
+
+
 def main() -> None:
     """Run the maze generator and launch the interactive ASCII UI."""
     if len(sys.argv) != 2:
