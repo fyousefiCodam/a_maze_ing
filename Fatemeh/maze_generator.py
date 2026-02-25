@@ -24,11 +24,8 @@ from enum import Enum
 from forty_two import embed_42, get_42_cells
 
 
-# ---------------------------------------------------------------------------
+
 # Direction helpers
-# ---------------------------------------------------------------------------
-
-
 class Direction(Enum):
     """Cardinal directions stored as wall bitmasks (N=1, E=2, S=4, W=8)."""
 
@@ -65,11 +62,8 @@ class Direction(Enum):
         return self.name[0]  # 'N', 'E', 'S', 'W'
 
 
-# ---------------------------------------------------------------------------
+
 # Maze data structure
-# ---------------------------------------------------------------------------
-
-
 class Maze:
     """Rectangular grid maze.
 
@@ -93,6 +87,8 @@ class Maze:
         exit_pos: tuple[int, int],
         seed: int | None = None,
     ) -> None:
+        # validate that the width is a positive number it cannot be
+        # 0 or negative
         if width <= 0:
             raise ValueError("Width must be a positive integer.")
         if height <= 0:
@@ -101,6 +97,7 @@ class Maze:
         self.width = width
         self.height = height
 
+        # Use `is not None` so that seed=0 is treated as a valid seed.
         if seed is not None:
             random.seed(seed)
 
@@ -150,11 +147,8 @@ class Maze:
         return 0 <= x < self.width and 0 <= y < self.height
 
 
-# ---------------------------------------------------------------------------
+
 # Wall operations
-# ---------------------------------------------------------------------------
-
-
 def _get_neighbours(
     maze: Maze,
     coord: tuple[int, int],
@@ -253,11 +247,8 @@ def _has_wall(
     return bool(maze.grid[y][x] & direction.value)
 
 
-# ---------------------------------------------------------------------------
+
 # 3x3 open-area detection
-# ---------------------------------------------------------------------------
-
-
 def _has_3x3_open(maze: Maze, x: int, y: int) -> bool:
     """Check if a 3x3 block starting at (x, y) is fully open (no walls).
 
@@ -306,11 +297,8 @@ def _creates_3x3_nearby(maze: Maze, x: int, y: int) -> bool:
     return False
 
 
-# ---------------------------------------------------------------------------
+
 # Cycle addition for imperfect mazes
-# ---------------------------------------------------------------------------
-
-
 def _add_cycles_safely(
     maze: Maze,
     forbidden_cells: set[tuple[int, int]],
@@ -352,11 +340,8 @@ def _add_cycles_safely(
             break
 
 
-# ---------------------------------------------------------------------------
+
 # DFS maze generator
-# ---------------------------------------------------------------------------
-
-
 def _generate_dfs(
     maze: Maze,
     forbidden_cells: set[tuple[int, int]] | None = None,
@@ -395,11 +380,8 @@ def _generate_dfs(
             stack.pop()
 
 
-# ---------------------------------------------------------------------------
+
 # BFS solver
-# ---------------------------------------------------------------------------
-
-
 def _solve_bfs(
     maze: Maze,
     forbidden_cells: set[tuple[int, int]] | None = None,
@@ -424,11 +406,13 @@ def _solve_bfs(
     visited: set[tuple[int, int]] = {maze.entry}
 
     while queue:
+         # take from front (BFS, not DFS)
         current, path = queue.popleft()
 
         if current == maze.exit:
             return "".join(path)
 
+        # same neighbour loop as your DFS
         for neighbour, direction in _get_neighbours(maze, current):
             if neighbour in visited:
                 continue
@@ -442,11 +426,8 @@ def _solve_bfs(
     return ""
 
 
-# ---------------------------------------------------------------------------
+
 # Public MazeGenerator class
-# ---------------------------------------------------------------------------
-
-
 class MazeGenerator:
     """Generate and solve a rectangular maze with an embedded '42' pattern.
 
