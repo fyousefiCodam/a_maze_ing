@@ -87,6 +87,8 @@ class Maze:
         exit_pos: tuple[int, int],
         seed: int | None = None,
     ) -> None:
+        # validate that the width is a positive number it cannot be
+        # 0 or negative
         if width <= 0:
             raise ValueError("Width must be a positive integer.")
         if height <= 0:
@@ -95,6 +97,7 @@ class Maze:
         self.width = width
         self.height = height
 
+        # Use `is not None` so that seed=0 is treated as a valid seed.
         if seed is not None:
             random.seed(seed)
 
@@ -403,11 +406,13 @@ def _solve_bfs(
     visited: set[tuple[int, int]] = {maze.entry}
 
     while queue:
+         # take from front (BFS, not DFS)
         current, path = queue.popleft()
 
         if current == maze.exit:
             return "".join(path)
 
+        # same neighbour loop as your DFS
         for neighbour, direction in _get_neighbours(maze, current):
             if neighbour in visited:
                 continue
