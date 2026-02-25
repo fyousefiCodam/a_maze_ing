@@ -264,7 +264,7 @@ def main() -> None:
     # Inner helper: generate, solve, write, return UI data
     def build_and_write(
         use_seed: Optional[int],
-    ) -> Tuple[List[List[int]], Tuple[int, int], Tuple[int, int], str]:
+    ) -> Tuple[List[List[int]], Tuple[int, int], Tuple[int, int], str, set]:
         """Generate a maze, write output file, return data for the UI."""
         gen = MazeGenerator(
             width=width,
@@ -279,16 +279,16 @@ def main() -> None:
         write_output_file(
             gen.grid, entry, maze_exit, new_path, output_file
         )
-        return gen.grid, entry, maze_exit, new_path
+        return gen.grid, entry, maze_exit, new_path, gen.forbidden_cells
 
     # Generate initial maze (using seed from config if provided)
-    grid, _, _, path = build_and_write(seed)
+    grid, _, _, path, forbidden = build_and_write(seed)
 
     print("Output file generated successfully.")
 
     # Re-generate callback passed to the UI (option 1)
     def regenerate() -> (
-        Tuple[List[List[int]], Tuple[int, int], Tuple[int, int], str]
+        Tuple[List[List[int]], Tuple[int, int], Tuple[int, int], str, set]
     ):
         """Return a fresh random maze and write the updated output file."""
         return build_and_write(None)
@@ -301,6 +301,7 @@ def main() -> None:
         entry=entry,
         exit_pos=maze_exit,
         path_str=path,
+        forbidden_cells=forbidden,
         regenerate_fn=regenerate,
     )
 

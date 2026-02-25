@@ -23,10 +23,11 @@ WALL_PALETTES: List[str] = [
     "\033[100m",  # dark grey
 ]
 
-OPEN_BG = "\033[40m"          # black  – open passage interior
-PATH_BG = "\033[46m"          # cyan   – solution path
+OPEN_BG = "\033[40m"           # black   – open passage interior
+PATH_BG = "\033[46m"           # cyan    – solution path
 ENTRY_BG = "\033[45m"          # magenta – entry cell
-EXIT_BG = "\033[41m"          # red     – exit cell
+EXIT_BG = "\033[41m"           # red     – exit cell
+FORTY_TWO_BG = "\033[103m"     # bright yellow/gold – '42' pattern cells
 
 # Wall-direction bitmasks
 NORTH: int = 0b0001   # bit 0
@@ -79,6 +80,7 @@ def build_pixel_grid(
     exit_pos: Tuple[int, int],
     path_coords: Optional[List[Tuple[int, int]]] = None,
     show_path: bool = False,
+    forbidden_cells: Optional[set] = None,
 ) -> List[List[str]]:
     """Build a pixel grid from the maze data.
 
@@ -92,6 +94,7 @@ def build_pixel_grid(
         'P'  – solution path
         'E'  – entry cell
         'X'  – exit cell
+        'F'  – '42' pattern cell (fully walled, decorative)
 
     Args:
         grid: 2-D list of cell bitmasks [row][col].
@@ -101,6 +104,7 @@ def build_pixel_grid(
         exit_pos: Exit cell (x, y).
         path_coords: List of (x, y) cells forming the solution.
         show_path: Whether to highlight the solution path.
+        forbidden_cells: Set of (x, y) cells belonging to the '42' pattern.
 
     Returns:
         2-D list of pixel type codes.
@@ -112,6 +116,7 @@ def build_pixel_grid(
     pixels: List[List[str]] = [['W'] * pw for _ in range(ph)]
 
     path_set = set(path_coords) if path_coords and show_path else set()
+    forty_two: set = forbidden_cells or set()
 
     for cy in range(height):
         for cx in range(width):
@@ -124,6 +129,8 @@ def build_pixel_grid(
                 cell_type = 'E'
             elif (cx, cy) == exit_pos:
                 cell_type = 'X'
+            elif (cx, cy) in forty_two:
+                cell_type = 'F'
             elif show_path and (cx, cy) in path_set:
                 cell_type = 'P'
             else:
@@ -178,6 +185,7 @@ def pixels_to_string(
         'P': PATH_BG,
         'E': ENTRY_BG,
         'X': EXIT_BG,
+        'F': FORTY_TWO_BG,
     }
 
     lines: List[str] = []
@@ -199,6 +207,7 @@ def render_maze(
     path_str: str = "",
     show_path: bool = False,
     wall_color_idx: int = 0,
+    forbidden_cells: Optional[set] = None,
 ) -> str:
     """Render the full maze as a coloured terminal string.
 
@@ -220,7 +229,8 @@ def render_maze(
         path_coords = path_to_coords(entry, path_str)
 
     pixels = build_pixel_grid(
-        grid, width, height, entry, exit_pos, path_coords, show_path
+        grid, width, height, entry, exit_pos, path_coords, show_path,
+        forbidden_cells,
     )
     return pixels_to_string(pixels, wall_color_idx)
 
@@ -234,6 +244,7 @@ def animate_path_ui(
     path_str: str,
     wall_color_idx: int,
     delay: float = 0.15,
+    forbidden_cells: Optional[set] = None,
 ) -> None:
     """
     Animate the solution path step by step in the terminal.
@@ -257,6 +268,7 @@ def animate_path_ui(
             exit_pos=exit_pos,
             path_coords=visible_coords,
             show_path=True,
+            forbidden_cells=forbidden_cells,
         )
 
         maze_str = pixels_to_string(pixels, wall_color_idx)
@@ -316,7 +328,8 @@ def print_legend() -> None:
         f"  {ENTRY_BG}  {RESET} Entry   "
         f"  {EXIT_BG}  {RESET} Exit    "
         f"  {PATH_BG}  {RESET} Solution path   "
-        f"  {OPEN_BG}  {RESET} Passage"
+        f"  {OPEN_BG}  {RESET} Passage   "
+        f"  {FORTY_TWO_BG}  {RESET} 42"
     )
     print()
 
@@ -338,11 +351,13 @@ def run_ui(
     entry: Tuple[int, int],
     exit_pos: Tuple[int, int],
     path_str: str,
+    forbidden_cells: Optional[set] = None,
     regenerate_fn: Optional[Callable[[], Tuple[
         List[List[int]],
         Tuple[int, int],
         Tuple[int, int],
         str,
+        set,
     ]]] = None,
 ) -> None:
     """Run the interactive ASCII terminal UI.
@@ -356,9 +371,10 @@ def run_ui(
         entry: Entry cell (x, y).
         exit_pos: Exit cell (x, y).
         path_str: Solution path string (e.g. 'EENNESS...').
+        forbidden_cells: Set of (x, y) cells for the '42' pattern.
         regenerate_fn: Optional callback that returns a new
-                       (grid, entry, exit_pos, path_str) tuple.
-                       If None, option 1 shows a notice.
+                       (grid, entry, exit_pos, path_str, forbidden_cells)
+                       tuple. If None, option 1 shows a notice.
     """
     show_path: bool = False
     wall_color_idx: int = 0
@@ -369,6 +385,7 @@ def run_ui(
         maze_str = render_maze(
             grid, width, height, entry, exit_pos,
             path_str, show_path, wall_color_idx,
+            forbidden_cells,
         )
 
         print_maze_frame(maze_str, show_path, wall_color_idx, entry, exit_pos)
@@ -387,7 +404,9 @@ def run_ui(
         if choice == '1':
             if regenerate_fn is not None:
                 try:
-                    grid, entry, exit_pos, path_str = regenerate_fn()
+                    grid, entry, exit_pos, path_str, forbidden_cells = (
+                        regenerate_fn()
+                    )
                     show_path = False  # Reset path display on new maze
                 except Exception as exc:
                     clear_screen()
@@ -414,6 +433,7 @@ def run_ui(
                 exit_pos=exit_pos,
                 path_str=path_str,
                 wall_color_idx=wall_color_idx,
+                forbidden_cells=forbidden_cells,
             )
             input("\nPress Enter to continue...")
 
@@ -445,3 +465,4 @@ if __name__ == "__main__":
         exit_pos=demo_exit,
         path_str=demo_path,
     )
+    

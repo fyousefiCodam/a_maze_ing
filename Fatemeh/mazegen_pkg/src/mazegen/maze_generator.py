@@ -1,8 +1,9 @@
 """
 maze_generator.py – Reusable maze generation module.
 
-Combines maze data structure, wall operations, DFS generator, and BFS solver
-into a single importable MazeGenerator class.
+Combines maze data structure, wall operations, DFS generator, cycle adder,
+BFS solver, and '42' pattern embedding into a single importable MazeGenerator
+class.
 
 Usage example::
 
@@ -14,6 +15,15 @@ Usage example::
     grid   = gen.grid          # list[list[int]], hex bitmask per cell
     path   = gen.solve()       # e.g. "EESSSWW..."
     print(gen.width, gen.height)
+
+Changes vs. original (merged from Rose's branch):
+    - _has_3x3_open / _creates_3x3_nearby: prevent 3x3 open areas
+    - _add_wall_back: undo a wall removal
+    - _add_cycles_safely: create loops for imperfect mazes without 3x3 zones
+    - _solve_bfs: accepts forbidden_cells to route around the '42' pattern
+    - MazeGenerator.generate(): embeds '42' pattern after DFS; supports
+      perfect=False via safe cycle addition
+    - MazeGenerator.forbidden_cells property: exposes the '42' cell set
 """
 
 import random
@@ -21,8 +31,13 @@ from collections import deque
 from enum import Enum
 from typing import Optional, Set, Tuple
 
+from forty_two import embed_42, get_42_cells, can_fit_42
 
+
+# ---------------------------------------------------------------------------
 # Direction helpers
+# ---------------------------------------------------------------------------
+
 class Direction(Enum):
     """Cardinal directions stored as wall bitmasks (N=1, E=2, S=4, W=8)."""
 
@@ -59,7 +74,10 @@ class Direction(Enum):
         return self.name[0]  # 'N', 'E', 'S', 'W'
 
 
+# ---------------------------------------------------------------------------
 # Maze data structure
+# ---------------------------------------------------------------------------
+
 class Maze:
     """Rectangular grid maze.
 
@@ -140,7 +158,10 @@ class Maze:
         return 0 <= x < self.width and 0 <= y < self.height
 
 
+# ---------------------------------------------------------------------------
 # Wall operations
+# ---------------------------------------------------------------------------
+
 def _get_neighbours(
     maze: Maze,
     coord: Tuple[int, int],
@@ -192,6 +213,34 @@ def _remove_wall(
     maze.grid[by][bx] &= ~direction.opposite.value
 
 
+def _add_wall_back(
+    maze: Maze,
+    coord_a: Tuple[int, int],
+    coord_b: Tuple[int, int],
+) -> None:
+    """Restore a wall between two adjacent cells (undo a removal).
+
+    Args:
+        maze: The maze instance.
+        coord_a: First cell (x, y).
+        coord_b: Second cell (x, y), must be directly adjacent to coord_a.
+
+    Raises:
+        ValueError: If the cells are not adjacent.
+    """
+    ax, ay = coord_a
+    bx, by = coord_b
+    dx, dy = bx - ax, by - ay
+
+    for direction in Direction:
+        if direction.delta == (dx, dy):
+            maze.grid[ay][ax] |= direction.value
+            maze.grid[by][bx] |= direction.opposite.value
+            return
+
+    raise ValueError(f"Cells {coord_a} and {coord_b} are not adjacent.")
+
+
 def _has_wall(
     maze: Maze,
     coord: Tuple[int, int],
@@ -211,7 +260,107 @@ def _has_wall(
     return bool(maze.grid[y][x] & direction.value)
 
 
-# DFS maze generator  (Rose's algorithm)
+# ---------------------------------------------------------------------------
+# 3x3 open-area detection  (Rose's contribution)
+# ---------------------------------------------------------------------------
+
+def _has_3x3_open(maze: Maze, x: int, y: int) -> bool:
+    """Check if a 3x3 block starting at (x, y) is fully open (no walls).
+
+    Args:
+        maze: The maze instance.
+        x: Top-left x coordinate of the block.
+        y: Top-left y coordinate of the block.
+
+    Returns:
+        True if the entire 3x3 area has no internal walls.
+    """
+    for row in range(y, y + 3):
+        for col in range(x, x + 3):
+            if col < x + 2:
+                if _has_wall(maze, (col, row), Direction.EAST):
+                    return False
+            if row < y + 2:
+                if _has_wall(maze, (col, row), Direction.SOUTH):
+                    return False
+    return True
+
+
+def _creates_3x3_nearby(maze: Maze, x: int, y: int) -> bool:
+    """Check whether any 3x3 block near (x, y) is fully open.
+
+    Called after opening a wall to decide whether to keep the change.
+
+    Args:
+        maze: The maze instance.
+        x: x coordinate of the recently changed cell.
+        y: y coordinate of the recently changed cell.
+
+    Returns:
+        True if a 3x3 open area exists in the vicinity.
+    """
+    for dy in range(-2, 1):
+        for dx in range(-2, 1):
+            check_x = x + dx
+            check_y = y + dy
+            if (
+                0 <= check_x <= maze.width - 3
+                and 0 <= check_y <= maze.height - 3
+            ):
+                if _has_3x3_open(maze, check_x, check_y):
+                    return True
+    return False
+
+
+# ---------------------------------------------------------------------------
+# Cycle addition for imperfect mazes  (Rose's contribution)
+# ---------------------------------------------------------------------------
+
+def _add_cycles_safely(
+    maze: Maze,
+    forbidden_cells: Set[Tuple[int, int]],
+    attempts: int = 300,
+) -> None:
+    """Open extra walls to create loops while keeping the maze valid.
+
+    Picks random cells and tries to open a wall to a neighbour. Rejects
+    the opening if it would create a 3x3 open area. Skips forbidden cells
+    to protect the '42' pattern.
+
+    Args:
+        maze: The maze instance (modified in-place).
+        forbidden_cells: Cells to never touch (e.g. the '42' pattern cells).
+        attempts: Number of random attempts to make.
+    """
+    for _ in range(attempts):
+        x = random.randint(0, maze.width - 1)
+        y = random.randint(0, maze.height - 1)
+
+        if (x, y) in forbidden_cells:
+            continue
+
+        neighbours = _get_neighbours(maze, (x, y))
+        random.shuffle(neighbours)
+
+        for (nx, ny), direction in neighbours:
+            if (nx, ny) in forbidden_cells:
+                continue
+
+            if not _has_wall(maze, (x, y), direction):
+                continue
+
+            _remove_wall(maze, (x, y), (nx, ny))
+
+            if _creates_3x3_nearby(maze, x, y):
+                _add_wall_back(maze, (x, y), (nx, ny))
+
+            break
+
+
+# ---------------------------------------------------------------------------
+# DFS maze generator
+# ---------------------------------------------------------------------------
+
 def _generate_dfs(maze: Maze) -> None:
     """Generate a perfect maze using iterative Depth-First Search (DFS).
 
@@ -244,17 +393,29 @@ def _generate_dfs(maze: Maze) -> None:
             stack.pop()
 
 
-# BFS solver  (Rose's algorithm)
-def _solve_bfs(maze: Maze) -> str:
+# ---------------------------------------------------------------------------
+# BFS solver
+# ---------------------------------------------------------------------------
+
+def _solve_bfs(
+    maze: Maze,
+    forbidden_cells: Optional[Set[Tuple[int, int]]] = None,
+) -> str:
     """Find the shortest path from entry to exit using BFS.
+
+    Avoids forbidden_cells (the '42' pattern) so the solution path does
+    not route through the decorative closed cells.
 
     Args:
         maze: A generated maze instance.
+        forbidden_cells: Optional set of cells to skip during search.
 
     Returns:
         Path string using N/E/S/W characters (e.g. 'EESSNN').
         Returns an empty string if no path exists.
     """
+    blocked: Set[Tuple[int, int]] = forbidden_cells or set()
+
     queue: deque[tuple[Tuple[int, int], list[str]]] = deque()
     queue.append((maze.entry, []))
     visited: Set[Tuple[int, int]] = {maze.entry}
@@ -266,16 +427,24 @@ def _solve_bfs(maze: Maze) -> str:
             return "".join(path)
 
         for neighbour, direction in _get_neighbours(maze, current):
-            if neighbour not in visited and not _has_wall(maze, current, direction):
-                visited.add(neighbour)
-                queue.append((neighbour, path + [direction.letter]))
+            if neighbour in visited:
+                continue
+            if _has_wall(maze, current, direction):
+                continue
+            if neighbour in blocked:
+                continue
+            visited.add(neighbour)
+            queue.append((neighbour, path + [direction.letter]))
 
     return ""
 
 
+# ---------------------------------------------------------------------------
 # Public MazeGenerator class
+# ---------------------------------------------------------------------------
+
 class MazeGenerator:
-    """Generate and solve a rectangular maze.
+    """Generate and solve a rectangular maze with an embedded '42' pattern.
 
     Args:
         width: Number of columns.
@@ -283,16 +452,18 @@ class MazeGenerator:
         entry: (x, y) entry cell.
         exit_pos: (x, y) exit cell.
         seed: Optional random seed for reproducibility.
-        perfect: If True (default) the DFS algorithm guarantees a perfect
-                 maze (exactly one path between any two cells).
+        perfect: If True (default) the maze has exactly one path between
+                 any two cells (DFS spanning tree, no extra loops).
+                 If False, extra loops are added safely (no 3x3 open areas).
 
     Example::
 
-        gen = MazeGenerator(width=10, height=10,
-                            entry=(0, 0), exit=(9, 9), seed=42)
+        gen = MazeGenerator(width=20, height=15,
+                            entry=(0, 0), exit=(19, 14), seed=42)
         gen.generate()
-        print(gen.grid)      # raw bitmask grid
-        print(gen.solve())   # e.g. 'EESSWWSS...'
+        print(gen.grid)            # raw bitmask grid
+        print(gen.solve())         # e.g. 'EESSWWSS...'
+        print(gen.forbidden_cells) # cells belonging to the '42' pattern
     """
 
     def __init__(
@@ -311,11 +482,21 @@ class MazeGenerator:
         self.seed = seed
         self.perfect = perfect
         self._maze: Optional[Maze] = None
+        self._forbidden: Set[Tuple[int, int]] = set()
 
     def generate(self) -> None:
         """Generate the maze in-place.
 
-        After calling this method, the ``grid`` property is available.
+        Steps:
+          1. Build the Maze data structure (all walls present).
+          2. Pre-compute the '42' pattern cell positions (forbidden set).
+          3. Run DFS to carve a perfect spanning tree.
+          4. If perfect=False, add safe cycles avoiding forbidden cells
+             and keeping corridors at most 2 cells wide (no 3x3 open areas).
+          5. Stamp the '42' pattern last (overrides any DFS carvings).
+
+        After calling this method the ``grid`` and ``forbidden_cells``
+        properties are available.
         """
         self._maze = Maze(
             width=self.width,
@@ -324,7 +505,20 @@ class MazeGenerator:
             exit_pos=self.exit_pos,
             seed=self.seed,
         )
+
+        # Pre-compute forbidden positions so cycle-adder can avoid them.
+        # Actual stamping happens AFTER DFS (step 5).
+        self._forbidden = get_42_cells(self.width, self.height)
+
+        # Step 3: Carve the spanning tree
         _generate_dfs(self._maze)
+
+        # Step 4: Add loops for imperfect mazes (skips forbidden cells)
+        if not self.perfect:
+            _add_cycles_safely(self._maze, self._forbidden)
+
+        # Step 5: Stamp '42' pattern – overwrites whatever DFS carved there
+        self._forbidden = embed_42(self._maze.grid, self.width, self.height)
 
     @property
     def grid(self) -> list[list[int]]:
@@ -337,8 +531,26 @@ class MazeGenerator:
             raise RuntimeError("Call generate() before accessing the grid.")
         return self._maze.grid
 
+    @property
+    def forbidden_cells(self) -> Set[Tuple[int, int]]:
+        """Set of (x, y) cells occupied by the '42' pattern.
+
+        These cells have all 4 walls closed (value 0xF).
+        The BFS solver avoids them automatically.
+
+        Raises:
+            RuntimeError: If generate() has not been called yet.
+        """
+        if self._maze is None:
+            raise RuntimeError(
+                "Call generate() before accessing forbidden_cells."
+            )
+        return self._forbidden
+
     def solve(self) -> str:
         """Return the shortest path from entry to exit as a direction string.
+
+        The path routes around the '42' pattern cells.
 
         Returns:
             String of N/E/S/W characters.
@@ -348,4 +560,4 @@ class MazeGenerator:
         """
         if self._maze is None:
             raise RuntimeError("Call generate() before calling solve().")
-        return _solve_bfs(self._maze)
+        return _solve_bfs(self._maze, self._forbidden)
