@@ -27,7 +27,7 @@ OPEN_BG = "\033[40m"           # black   – open passage interior
 PATH_BG = "\033[46m"           # cyan    – solution path
 ENTRY_BG = "\033[45m"          # magenta – entry cell
 EXIT_BG = "\033[41m"           # red     – exit cell
-FORTY_TWO_BG = "\033[103m"     # bright yellow/gold – '42' pattern cells
+FORTY_TWO_BG = "\033[42m"      # green background– '42' pattern cells
 
 # Wall-direction bitmasks
 NORTH: int = 0b0001   # bit 0
