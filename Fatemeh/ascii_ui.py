@@ -9,8 +9,6 @@ from typing import List, Tuple, Optional, Callable
 
 
 # ANSI helpers
-
-
 RESET = "\033[0m"
 
 # Wall colour palette (background colours) – cycled by option 3
@@ -30,7 +28,7 @@ PATH_BG = "\033[46m"          # cyan   – solution path
 ENTRY_BG = "\033[45m"          # magenta – entry cell
 EXIT_BG = "\033[41m"          # red     – exit cell
 
-# Wall-direction bitmasks (from the subject spec)
+# Wall-direction bitmasks
 NORTH: int = 0b0001   # bit 0
 EAST:  int = 0b0010   # bit 1
 SOUTH: int = 0b0100   # bit 2
