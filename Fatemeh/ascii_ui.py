@@ -297,8 +297,13 @@ def animate_path_ui(
         )
 
         maze_str = pixels_to_string(pixels, wall_color_idx)
-        print_maze_frame(maze_str, show_path=True, wall_color_idx=wall_color_idx,
-                         entry=entry, exit_pos=exit_pos)
+        print_maze_frame(
+            maze_str,
+            show_path=True,
+            wall_color_idx=wall_color_idx,
+            entry=entry,
+            exit_pos=exit_pos,
+        )
         print_legend()
         time.sleep(delay)
 
@@ -331,11 +336,13 @@ def print_maze_frame(
     """
     palette_name = _PALETTE_NAMES[wall_color_idx % len(_PALETTE_NAMES)]
     path_state = "\033[32mON\033[0m" if show_path else "\033[31mOFF\033[0m"
+    entry_coords = f"\033[35m({entry[0]},{entry[1]})\033[0m"
+    exit_coords = f"\033[31m({exit_pos[0]},{exit_pos[1]})\033[0m"
 
     print(
         f"\033[1m=== A-Maze-ing ===\033[0m  "
-        f"Entry: {ENTRY_BG}  {RESET} \033[35m({entry[0]},{entry[1]})\033[0m  "
-        f"Exit: {EXIT_BG}  {RESET} \033[31m({exit_pos[0]},{exit_pos[1]})\033[0m  "
+        f"Entry: {ENTRY_BG}  {RESET} {entry_coords}  "
+        f"Exit: {EXIT_BG}  {RESET} {exit_coords}  "
         f"Path: {path_state}  "
         f"Walls: \033[1m{palette_name}\033[0m"
     )
@@ -371,7 +378,13 @@ def print_menu() -> None:
 
 _RegenerateFn = Callable[
     [],
-    Tuple[List[List[int]], Tuple[int, int], Tuple[int, int], str, set[Tuple[int, int]]],
+    Tuple[
+        List[List[int]],
+        Tuple[int, int],
+        Tuple[int, int],
+        str,
+        set[Tuple[int, int]],
+    ],
 ]
 
 
@@ -418,7 +431,11 @@ def run_ui(
         print_menu()
 
         if regenerate_fn is None:
-            print("\033[2m(Re-generate unavailable: no generator provided)\033[0m")
+            msg = (
+                "\033[2m(Re-generate unavailable: "
+                "no generator provided)\033[0m"
+            )
+            print(msg)
 
         try:
             choice = input("\nChoice (1-5): ").strip()

@@ -107,7 +107,8 @@ def parse_config(path: str) -> Dict[str, str]:
 
         config[key] = value
 
-    required_keys = {"WIDTH", "HEIGHT", "ENTRY", "EXIT", "OUTPUT_FILE", "PERFECT"}
+    required_keys = {"WIDTH", "HEIGHT", "ENTRY",
+                     "EXIT", "OUTPUT_FILE", "PERFECT"}
     missing_keys = required_keys - config.keys()
     if missing_keys:
         error_exit(
@@ -257,7 +258,13 @@ def main() -> None:
 
     def build_and_write(
         use_seed: Optional[int],
-    ) -> Tuple[List[List[int]], Tuple[int, int], Tuple[int, int], str, set[Tuple[int, int]]]:
+    ) -> Tuple[
+        List[List[int]],
+        Tuple[int, int],
+        Tuple[int, int],
+        str,
+        set[Tuple[int, int]],
+    ]:
         """Generate a maze, write the output file, return data for the UI."""
         gen = MazeGenerator(
             width=width,
@@ -275,9 +282,13 @@ def main() -> None:
     grid, _, _, path, forbidden = build_and_write(seed)
     print("Output file generated successfully.")
 
-    def regenerate() -> (
-        Tuple[List[List[int]], Tuple[int, int], Tuple[int, int], str, set[Tuple[int, int]]]
-    ):
+    def regenerate() -> Tuple[
+        List[List[int]],
+        Tuple[int, int],
+        Tuple[int, int],
+        str,
+        set[Tuple[int, int]],
+    ]:
         """Return a fresh random maze and write the updated output file."""
         return build_and_write(None)
 

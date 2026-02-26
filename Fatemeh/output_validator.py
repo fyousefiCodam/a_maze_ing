@@ -23,7 +23,8 @@ def validate(path: str) -> None:
 
     parts = content.strip().split("\n\n")
     if len(parts) != 2:
-        print("Error: File must have a maze grid and a metadata block separated by a blank line.")
+        print("Error: File must have a maze grid and a metadata block "
+              "separated by a blank line.")
         sys.exit(1)
 
     grid_lines = parts[0].splitlines()
