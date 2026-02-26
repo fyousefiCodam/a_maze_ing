@@ -10,9 +10,11 @@ import os
 import time
 from typing import Callable, List, Optional, Tuple
 
-# ---------------------------------------------------------------------------
+from forty_two import can_fit_42, MIN_WIDTH, MIN_HEIGHT
+
+
 # ANSI colour constants
-# ---------------------------------------------------------------------------
+
 
 RESET = "\033[0m"
 
@@ -45,11 +47,8 @@ _PALETTE_NAMES: List[str] = [
     "Green", "Magenta", "Cyan", "Dark",
 ]
 
-# ---------------------------------------------------------------------------
+
 # Path utilities
-# ---------------------------------------------------------------------------
-
-
 def path_to_coords(
     entry: Tuple[int, int],
     path_str: str,
@@ -79,11 +78,7 @@ def path_to_coords(
     return coords
 
 
-# ---------------------------------------------------------------------------
 # Core renderer
-# ---------------------------------------------------------------------------
-
-
 def build_pixel_grid(
     grid: List[List[int]],
     width: int,
@@ -246,11 +241,7 @@ def render_maze(
     return pixels_to_string(pixels, wall_color_idx)
 
 
-# ---------------------------------------------------------------------------
 # Animation
-# ---------------------------------------------------------------------------
-
-
 def animate_path_ui(
     grid: List[List[int]],
     width: int,
@@ -304,15 +295,15 @@ def animate_path_ui(
             entry=entry,
             exit_pos=exit_pos,
         )
-        print_legend()
+        print_legend(
+            show_42=bool(forbidden_cells),
+            width=width,
+            height=height,
+        )
         time.sleep(delay)
 
 
-# ---------------------------------------------------------------------------
 # Display helpers
-# ---------------------------------------------------------------------------
-
-
 def clear_screen() -> None:
     """Clear the terminal screen portably."""
     os.system("cls" if os.name == "nt" else "clear")
@@ -351,15 +342,36 @@ def print_maze_frame(
     print()
 
 
-def print_legend() -> None:
-    """Print a colour legend below the maze."""
+def print_legend(
+    show_42: bool = True,
+    width: int = 0,
+    height: int = 0,
+) -> None:
+    """Print a colour legend below the maze.
+
+    Args:
+        show_42: Whether the '42' pattern is present in the maze.
+        width: Maze width (used to show minimum size in the notice).
+        height: Maze height (used to show minimum size in the notice).
+    """
+    forty_two_part = (
+        f"  {FORTY_TWO_BG}  {RESET} 42"
+        if show_42
+        else ""
+    )
     print(
         f"  {ENTRY_BG}  {RESET} Entry   "
         f"  {EXIT_BG}  {RESET} Exit    "
         f"  {PATH_BG}  {RESET} Solution path   "
-        f"  {OPEN_BG}  {RESET} Passage   "
-        f"  {FORTY_TWO_BG}  {RESET} 42"
+        f"  {OPEN_BG}  {RESET} Passage"
+        f"{forty_two_part}"
     )
+    if not show_42:
+        print(
+            f"\033[33m  \u26a0  Maze is too small to display the '42' pattern "
+            f"(current: {width}\u00d7{height}, "
+            f"minimum required: {MIN_WIDTH}\u00d7{MIN_HEIGHT}).\033[0m"
+        )
     print()
 
 
@@ -372,10 +384,7 @@ def print_menu() -> None:
     print("\033[1m5.\033[0m Quit")
 
 
-# ---------------------------------------------------------------------------
 # Main interactive loop
-# ---------------------------------------------------------------------------
-
 _RegenerateFn = Callable[
     [],
     Tuple[
@@ -427,7 +436,11 @@ def run_ui(
         )
 
         print_maze_frame(maze_str, show_path, wall_color_idx, entry, exit_pos)
-        print_legend()
+        print_legend(
+            show_42=can_fit_42(width, height),
+            width=width,
+            height=height,
+        )
         print_menu()
 
         if regenerate_fn is None:
@@ -487,10 +500,7 @@ def run_ui(
             input("\033[33mInvalid choice. Press Enter to continue...\033[0m")
 
 
-# ---------------------------------------------------------------------------
 # Standalone entry-point (quick renderer test)
-# ---------------------------------------------------------------------------
-
 if __name__ == "__main__":
     demo_grid: List[List[int]] = [
         [0xF, 0xE, 0xD],
