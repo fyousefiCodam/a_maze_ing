@@ -17,11 +17,7 @@ from ascii_ui import run_ui
 from maze_generator import MazeGenerator
 
 
-# ---------------------------------------------------------------------------
 # Config types
-# ---------------------------------------------------------------------------
-
-
 class ValidatedConfig:
     """Validated, typed maze configuration parsed from a config file."""
 
@@ -44,11 +40,7 @@ class ValidatedConfig:
         self.output_file = output_file
 
 
-# ---------------------------------------------------------------------------
 # Helpers
-# ---------------------------------------------------------------------------
-
-
 def error_exit(message: str) -> NoReturn:
     """Print a clear error message and exit the program cleanly.
 
@@ -59,11 +51,7 @@ def error_exit(message: str) -> NoReturn:
     sys.exit(1)
 
 
-# ---------------------------------------------------------------------------
 # Config parsing
-# ---------------------------------------------------------------------------
-
-
 def parse_config(path: str) -> Dict[str, str]:
     """Read the configuration file and perform format-level validation.
 
@@ -202,11 +190,7 @@ def validate_config(raw_config: Dict[str, str]) -> ValidatedConfig:
     )
 
 
-# ---------------------------------------------------------------------------
 # Output
-# ---------------------------------------------------------------------------
-
-
 def write_output_file(
     grid: List[List[int]],
     entry: Tuple[int, int],
@@ -236,11 +220,7 @@ def write_output_file(
         error_exit(f"Cannot write to output file '{output_file}'.")
 
 
-# ---------------------------------------------------------------------------
 # Main
-# ---------------------------------------------------------------------------
-
-
 def main() -> None:
     """Run the maze generator and launch the interactive ASCII UI."""
     if len(sys.argv) != 2:
